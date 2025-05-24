@@ -1,0 +1,491 @@
+---
+# playbook.yml - Ansible playbook for Arch Linux development environment setup
+- name: Arch Linux Development Environment Setup
+  hosts: localhost
+  gather_facts: yes
+  connection: local
+  become: yes
+  
+  vars:
+    username: "{{ lookup('env', 'USER') }}"
+    user_home: "/home/{{ username }}"
+    git_server_port: 3000
+    install_tiling_wm: true  # Set to false if you don't want a tiling WM
+    tiling_wm: "i3-gaps"     # Options: i3-gaps, sway, awesome, qtile, bspwm
+    HOME: "{{ user_home }}"
+    USER: "{{ username` }}"
+    # DISPLAY: "{{ ansible_env.DISPLAY | default('') }}"
+    # XDG_CONFIG_HOME: "{{ ansible_env.XDG_CONFIG_HOME | default(user_home + '/.config') }}"
+    # XDG_DATA_HOME: "{{ ansible_env.XDG_DATA_HOME | default(user_home + '/.local/share') }}"
+    # PATH: "{{ ansible_env.PATH }}"
+  tasks:
+    - name: Debug user variables
+      debug:
+        msg: 
+          - "ansible_user_id: {{ ansible_user_id | default('NOT SET') }}"
+          - "ansible_env.USER: {{ ansible_env.USER | default('NOT SET') }}"
+          - "Current user from whoami: {{ ansible_facts['user_id'] | default('NOT SET') }}"
+          - " username {{ username }}"
+          - " userhome {{ user_home }}"
+    # - name: Compare environments
+    #   shell: |
+    #     echo "=== Terminal environment ==="
+    #     bash -l -c 'env | sort' > /tmp/terminal_env.txt
+    #     echo "=== Ansible environment ==="
+    #     env | sort > /tmp/ansible_env.txt
+    #     echo "=== Differences ==="
+    #     diff /tmp/terminal_env.txt /tmp/ansible_env.txt || true
+    #   register: env_diff
+
+    # Update system packages
+    - name: Update system packages
+      pacman:
+        update_cache: yes
+        upgrade: yes
+      
+    # Install essential development packages
+    - name: Install development essentials
+      pacman:
+        name:
+          - base-devel
+          - git
+          - curl
+          - wget
+          - openssh
+          - python
+          - python-pip
+          - hyprland
+        state: present
+    
+    # Install AUR helper (yay)
+    - name: Check if yay is installedstdout_callback
+      command: which yay
+      register: yay_installed
+      changed_when: false
+      failed_when: false
+      
+    - name: Install yay (AUR helper)
+      when: yay_installed.rc != 0
+      become: no
+      block:
+        - name: Clone yay repository
+          git:
+            repo: https://aur.archlinux.org/yay.git
+            dest: "{{ user_home }}/yay"
+          
+        - name: Build and install yay
+          command: makepkg -si --noconfirm
+          args:
+            chdir: "{{ user_home }}/yay"
+            
+        - name: Clean up yay build directory
+          file:
+            path: "{{ user_home }}/yay"
+            state: absent
+
+    # Install terminal emulator - Alacritty
+    - name: Install Alacritty terminal
+      pacman:
+        name:
+          - alacritty
+        state: present
+        
+    # Configure Alacritty
+    - name: Create Alacritty config directory
+      become: no
+      file:
+        path: "{{ user_home }}/.config/alacritty"
+        state: directory
+        mode: '0755'
+
+    - name: Install Nerd Font for Alacritty
+      become: no
+      command: yay -S --noconfirm ttf-firacode-nerd
+      register: font_result
+      changed_when: font_result.rc == 0
+      failed_when: font_result.rc != 0 and 'error' in font_result.stderr
+        
+    - name: Configure Alacritty
+      become: no
+      copy:
+        dest: "{{ user_home }}/.config/alacritty/alacritty.yml"
+        content: |
+          # Performance
+          env:
+            TERM: xterm-256color
+          
+          # Appearance
+          window:
+            padding:
+              x: 10
+              y: 10
+            dynamic_padding: true
+            decorations: full
+            opacity: 0.95  # Slight transparency
+          
+          # Font configuration
+          font:
+            normal:
+              family: FiraCode Nerd Font
+              style: Regular
+            bold:
+              style: Bold
+            italic:
+              style: Italic
+            size: 12.0
+            offset:
+              x: 0
+              y: 0
+            glyph_offset:
+              x: 0
+              y: 0
+            use_thin_strokes: true
+          
+          # Colors (Dracula theme)
+          colors:
+            primary:
+              background: '#282a36'
+              foreground: '#f8f8f2'
+            cursor:
+              text: '#44475a'
+              cursor: '#f8f8f2'
+            selection:
+              text: '#f8f8f2'
+              background: '#44475a'
+          
+          # Shell integration
+          shell:
+            program: /bin/zsh
+          
+          # Keybindings for productivity
+          key_bindings:
+            - { key: V,        mods: Control|Shift, action: Paste            }
+            - { key: C,        mods: Control|Shift, action: Copy             }
+            - { key: N,        mods: Control|Shift, action: SpawnNewInstance }
+            - { key: Key0,     mods: Control,       action: ResetFontSize    }
+            - { key: Plus,     mods: Control,       action: IncreaseFontSize }
+            - { key: Minus,    mods: Control,       action: DecreaseFontSize }
+        mode: '0644'
+
+    # # Install VS Code
+    # - name: Install VS Code
+    #   community.general.pacman:
+    #      name: visual-studio-code-bin
+    #      state: present
+    #      executable: yay
+    #      extra_args: "--builddir /tmp/yay"
+    #   become: no
+        
+    # Install VS Code extensions
+   # - name: Install VS Code extensions
+   #   become: false  # Explicitly don't use sudo
+   #   become_user: "{{ ansible_user_id }}" 
+   #   # raw: code --install-extension {{ item }}
+   #   ansible.builtin.shell: 'code --install-extension {{ item }}'
+   #   args:
+   #     executable: /bin/bash
+   #   environment:
+   #     PATH: "/usr/bin:/usr/local/bin:{{ user_home }}/.vscode/bin:$PATH"
+   #     DISPLAY: "{{ ansible_env.DISPLAY | default('') }}"
+   #     XDG_CONFIG_HOME: "{{ ansible_env.XDG_CONFIG_HOME | default(user_home + '/.config') }}"
+   #     XDG_DATA_HOME: "{{ ansible_env.XDG_DATA_HOME | default(user_home + '/.local/share') }}"
+   #   loop:
+   #     - redhat.ansible
+   #     - ms-azuretools.vscode-docker
+   #     - ms-kubernetes-tools.vscode-kubernetes-tools
+   #     - hashicorp.terraform
+   #   register: vscode_ext_result
+   #   changed_when: "'already installed' not in vscode_ext_result.stdout"
+
+    # Install PyCharm Professional
+    - name: Install PyCharm Professional
+      become: no
+      community.general.pacman:
+        name: pycharm-professional
+        state: present
+        executable: yay
+        extra_args: "--builddir /tmp/yay"
+      register: pycharm_result
+        # - name: Install VS Code
+    #   community.general.pacman:
+    #      name: visual-studio-code-bin
+    #      state: present
+    #      executable: yay
+    #      extra_args: "--builddir /tmp/yay"
+    #   become: no
+    # Install UV package manager
+    - name: Install UV package manager
+      become: no
+      command: yay -S --noconfirm uv
+      register: uv_result
+      changed_when: uv_result.rc == 0
+      failed_when: uv_result.rc != 0 and 'error' in uv_result.stderr
+    
+    # Configure UV
+    - name: Create UV config directory
+      become: no
+      file:
+        path: "{{ user_home }}/.config/uv"
+        state: directory
+        mode: '0755'
+
+    # - name: Create UV config file
+    #   become: no
+    #   copy:
+    #     dest: "{{ user_home }}/.config/uv/uv.toml"
+    #     content: |
+    #       default-python = "python3"
+    #     mode: '0644'
+    
+    # Install Gitea for local Git server
+    # - name: Install Gitea
+    #   pacman:
+    #     name:
+    #       - gitea
+    #     state: present
+        
+    # - name: Create Gitea config directory
+    #   file:
+    #     path: /etc/gitea
+    #     state: directory
+    #     mode: '0755'
+        
+    # - name: Configure Gitea
+    #   copy:
+    #     remote_src: yes
+    #     src: /etc/gitea/app.example.ini
+    #     dest: /etc/gitea/app.ini
+    #     force: no
+        
+    # - name: Update Gitea configuration
+    #   lineinfile:
+    #     path: /etc/gitea/app.ini
+    #     regexp: '^HTTP_PORT'
+    #     line: 'HTTP_PORT = {{ git_server_port }}'
+        
+    # - name: Enable and start Gitea service
+    #   systemd:
+    #     name: gitea
+    #     enabled: yes
+    #     state: started
+    
+    # Install Docker
+    - name: Install Docker
+      pacman:
+        name:
+          - docker
+          - docker-compose
+        state: present
+        
+    # - name: Enable and start Docker service
+    #   systemd:
+    #     name: docker.service
+    #     enabled: yes
+    #     state: started
+        
+    # - name: Add user to docker group
+    #   user:
+    #     name: "{{ username }}"
+    #     groups: docker
+    #     append: yes
+    
+    # Install additional data analysis tools
+    - name: Install R (optional)
+      pacman:
+        name:
+          - r
+        state: present
+        
+    - name: Install RStudio (optional)
+      become: no
+      command: yay -S --noconfirm rstudio-desktop-bin
+      register: rstudio_result
+      changed_when: rstudio_result.rc == 0
+      failed_when: rstudio_result.rc != 0 and 'error' in rstudio_result.stderr
+    
+    # Install database tools
+    - name: Install database tools
+      community.general.pacman:
+        name:
+          - postgresql
+          - mariadb
+          # - mongodb
+        state: present
+
+    # - name: Install mongodb
+    #   community.general.pacman:
+    #      name: mongodb
+    #      state: present
+    #      executable: yay
+    #      extra_args: "--builddir /tmp/yay"
+    #   become: no
+
+    - name: Install hyprland starter
+      become: no
+      git:
+        repo: https://github.com/mylinuxforwork/hyprland-starter
+        dest: "{{ user_home }}/hyprland-started"
+        depth: 1
+      # register: hyprland-starter_installed
+
+    # Install Zsh and Oh My Zsh
+    - name: Install Zsh
+      pacman:
+        name:
+          - zsh
+        state: present
+
+    - name: Create Zsh config directory
+      become: no
+      file:
+        path: "{{ user_home }}/.zshrc"
+        state: directory
+        mode: '0755'
+      register: zsh_config_dir
+    
+        
+    # Install Fish shell
+    - name: Install Fish shell
+      pacman:
+        name:
+          - fish
+        state: present
+    
+    # Install powerlevel10k
+    - name: Install powerlevel10k theme
+      become: no
+      git:
+        repo: https://github.com/romkatv/powerlevel10k.git
+        dest: "{{ user_home }}/.oh-my-zsh/custom/themes/powerlevel10k"
+        depth: 1
+      register: p10k_installed
+        
+    - name: Check if Oh My Zsh is installed
+      become: no
+      stat:
+        path: "{{ user_home }}/.oh-my-zsh"
+      register: oh_my_zsh_installed
+      
+    - name: Install Oh My Zsh
+      become: no
+      when: not oh_my_zsh_installed.stat.exists
+      shell: curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh | sh
+      args:
+        creates: "{{ user_home }}/.oh-my-zsh"
+        
+    - name: Configure powerlevel10k theme in zshrc
+      become: no
+      lineinfile:
+        path: "{{ user_home }}/.zshrc"
+        regexp: '^ZSH_THEME='
+        line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'
+        
+    
+    # Install tiling window manager if enabled
+    - name: Install tiling window manager
+      when: install_tiling_wm
+      pacman:
+        name:
+          - "{{ tiling_wm }}"
+          - rofi         # Application launcher
+          - dunst        # Notifications
+          - picom        # Compositor
+          - feh          # Wallpaper manager
+          - sxhkd        # Hotkey daemon
+          - lxappearance
+          - i3status 
+          - i3clock 
+          - dmenu
+          - i3status 
+          - i3lock 
+          - dmenu
+          - i3-gaps
+
+        state: present
+        
+    # Install common development tools
+    - name: Install productivity tools
+      pacman:
+        name:
+          - flameshot      # Screenshot tool
+          - meld           # Diff tool
+          - zeal           # Offline documentation
+          - tmux           # Terminal multiplexer
+          - btop           # System monitoring
+          - ranger         # File manager
+          - timeshift      # System backups
+          - syncthing      # File synchronization
+          - keepassxc      # Password manager
+        state: present
+
+    # Install common fonts
+    - name: Install additional fonts
+      pacman:
+        name:
+          - ttf-dejavu
+          - ttf-liberation
+          - noto-fonts
+          - noto-fonts-emoji
+        state: present
+          
+    # Add GPU support for ML/LLM (NVIDIA)
+    - name: Check for NVIDIA GPU
+      shell: lspci | grep -i nvidia
+      register: has_nvidia
+      changed_when: false
+      failed_when: false
+      
+    - name: Install NVIDIA CUDA support
+      when: has_nvidia.rc == 0
+      pacman:
+        name:
+          - cuda
+          - cudnn
+        state: present
+
+    # Create projects directory structure
+    - name: Create project directories
+      become: no
+      file:
+        path: "{{ user_home }}/Projects/{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - llm-dev
+        - app-dev
+        - data-analysis
+        
+    # Set Alacritty as default terminal (if installed)
+    - name: Set Alacritty as default terminal
+      become: no
+      command: xdg-mime default alacritty.desktop x-scheme-handler/terminal
+      changed_when: false
+      failed_when: false
+        
+    # Notify user about completion
+    - name: Display completion message
+      debug:
+        msg: |
+          Development environment setup complete!
+          
+          Access your local Git server at: http://localhost:{{ git_server_port }}
+          
+          Remember to log out and back in for the docker group changes to take effect.
+          
+          Python environments were not created as requested - use the following commands to set them up:
+          cd ~/projects/llm-dev
+          uv venv
+          source .venv/bin/activate
+          uv pip install torch transformers datasets huggingface_hub
+          
+          Shells setup:
+          - ZSH with Powerlevel10k theme is installed
+          - Fish shell is also available, switch to it by typing 'fish'
+          
+          Terminal:
+          - Alacritty has been configured as your terminal emulator
+          
+          {% if install_tiling_wm %}
+          Window Manager:
+          - {{ tiling_wm }} has been installed as your tiling window manager
+          {% endif %}

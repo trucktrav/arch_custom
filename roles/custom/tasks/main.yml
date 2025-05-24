@@ -1,0 +1,362 @@
+- name: Debug user variables
+  ansible.builtin.debug:
+    msg:
+      - "ansible_user_id: {{ ansible_user_id | default('NOT SET') }}"
+      - "ansible_env.USER: {{ ansible_env.USER | default('NOT SET') }}"
+      - "Current user from whoami: {{ ansible_facts['user_id'] | default('NOT SET') }}"
+      - " username {{ username }}"
+      - " userhome {{ user_home }}"
+
+- name: Update system packages
+  community.general.pacman:
+    update_cache: true
+    upgrade: true
+
+- name: Install development essentials
+  community.general.pacman:
+    name:
+      - base-devel
+      - git
+      - curl
+      - wget
+      - openssh
+      - python
+      - python-pip
+      - hyprland
+      - tmux
+    state: present
+
+- name: Check if yay is installed
+  ansible.builtin.command: which yay
+  register: yay_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install yay (AUR helper)
+  when: yay_installed.rc != 0
+  become: false
+  block:
+    - name: Clone yay repository
+      ansible.builtin.git:
+        repo: https://aur.archlinux.org/yay.git
+        dest: "{{ user_home }}/yay"
+        clone: true
+        update: false
+      args:
+        creates: "{{ user_home }}/yay"
+
+    - name: Build and install yay
+      ansible.builtin.shell: |
+        cd "{{ user_home }}/yay" && makepkg -si --noconfirm
+      args:
+        chdir: "{{ user_home }}/yay"
+      register: yay_build_result
+      changed_when: yay_build_result.rc == 0
+      failed_when: yay_build_result.rc != 0
+
+    - name: Clean up yay build directory
+      ansible.builtin.file:
+        path: "{{ user_home }}/yay"
+        state: absent
+
+- name: Install Alacritty terminal
+  community.general.pacman:
+    name:
+      - alacritty
+    state: present
+
+- name: Create Alacritty config directory
+  become: false
+  ansible.builtin.file:
+    path: "{{ user_home }}/.config/alacritty"
+    state: directory
+    mode: '0755'
+
+- name: Install Nerd Font for Alacritty
+  become: false
+  ansible.builtin.command: yay -S --noconfirm ttf-firacode-nerd
+  register: font_result
+  changed_when: font_result.rc == 0
+  failed_when: font_result.rc != 0 and 'error' in font_result.stderr
+
+- name: Configure Alacritty
+  become: false
+  ansible.builtin.copy:
+    dest: "{{ user_home }}/.config/alacritty/alacritty.yml"
+    content: |
+      # Performance
+      env:
+        TERM: xterm-256color
+
+      # Appearance
+      window:
+        padding:
+          x: 10
+          y: 10
+        dynamic_padding: true
+        decorations: full
+        opacity: 0.95  # Slight transparency
+
+      # Font configuration
+      font:
+        normal:
+          family: FiraCode Nerd Font
+          style: Regular
+        bold:
+          style: Bold
+        italic:
+          style: Italic
+        size: 12.0
+        offset:
+          x: 0
+          y: 0
+        glyph_offset:
+          x: 0
+          y: 0
+        use_thin_strokes: true
+
+      # Colors (Dracula theme)
+      colors:
+        primary:
+          background: '#282a36'
+          foreground: '#f8f8f2'
+        cursor:
+          text: '#44475a'
+          cursor: '#f8f8f2'
+        selection:
+          text: '#f8f8f2'
+          background: '#44475a'
+
+      # Shell integration
+      shell:
+        program: /bin/zsh
+
+      # Keybindings for productivity
+      key_bindings:
+        - { key: V,        mods: Control|Shift, action: Paste            }
+        - { key: C,        mods: Control|Shift, action: Copy             }
+        - { key: N,        mods: Control|Shift, action: SpawnNewInstance }
+        - { key: Key0,     mods: Control,       action: ResetFontSize    }
+        - { key: Plus,     mods: Control,       action: IncreaseFontSize }
+        - { key: Minus,    mods: Control,       action: DecreaseFontSize }
+    mode: '0644'
+
+- name: Install PyCharm Professional
+  become: false
+  community.general.pacman:
+    name: pycharm-professional
+    state: present
+    executable: yay
+    extra_args: "--builddir /tmp/yay"
+
+
+- name: Install UV package manager
+  become: false
+  ansible.builtin.command: yay -S --noconfirm uv
+  register: uv_result
+  changed_when: uv_result.rc == 0
+  failed_when: uv_result.rc != 0 and 'error' in uv_result.stderr
+
+- name: Create UV config directory
+  become: false
+  ansible.builtin.file:
+    path: "{{ user_home }}/.config/uv"
+    state: directory
+    mode: '0755'
+
+- name: Install Docker
+  community.general.pacman:
+    name:
+      - docker
+      - docker-compose
+    state: present
+
+- name: Install R (optional)
+  community.general.pacman:
+    name:
+      - r
+    state: present
+
+- name: Install RStudio (optional)
+  become: false
+  community.general.pacman:
+    name: rstudio-desktop-bin
+    state: present
+    executable: yay
+    extra_args: "--builddir /tmp/yay"
+
+- name: Install database tools
+  community.general.pacman:
+    name:
+      - postgresql
+      - mariadb
+    state: present
+
+# Uncomment to install mongodb from AUR
+# - name: Install mongodb
+#   community.general.pacman:
+#     name: mongodb
+#     state: present
+#     executable: yay
+#     extra_args: "--builddir /tmp/yay"
+#   become: false
+
+- name: Check if hyprland starter is already cloned
+  become: false
+  ansible.builtin.stat:
+    path: "{{ user_home }}/hyprland-started"
+  register: hyprland_starter_dir
+
+- name: Install hyprland starter
+  become: false
+  ansible.builtin.git:
+    repo: https://github.com/mylinuxforwork/hyprland-starter
+    dest: "{{ user_home }}/hyprland-started"
+    depth: 1
+  when: not hyprland_starter_dir.stat.exists
+
+- name: Install Zsh
+  community.general.pacman:
+    name:
+      - zsh
+    state: present
+
+# - name: Create Zsh config file
+#   become: false
+#   ansible.builtin.file:
+#     path: "{{ user_home }}/.zshrc"
+#     owner: "{{ username }}"
+#     group: "{{ username }}"
+#     state: touch
+#     mode: '0644'
+
+- name: Install Fish shell
+  community.general.pacman:
+    name:
+      - fish
+    state: present
+
+# - name: Install powerlevel10k theme
+#   become: false
+#   ansible.builtin.git:
+#     repo: https://github.com/romkatv/powerlevel10k.git
+#     dest: "{{ user_home }}/.oh-my-zsh/custom/themes/powerlevel10k"
+#     depth: 1
+#   register: p10k_installed
+
+# - name: Check if Oh My Zsh is installed
+#   become: false
+#   ansible.builtin.stat:
+#     path: "{{ user_home }}/.oh-my-zsh"
+#   register: oh_my_zsh_installed
+
+# - name: Install Oh My Zsh
+#   become: false
+#   when: not oh_my_zsh_installed.stat.exists
+#   ansible.builtin.shell: curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh | sh
+#   args:
+#     creates: "{{ user_home }}/.oh-my-zsh"
+
+# - name: Configure powerlevel10k theme in zshrc
+#   become: false
+#   ansible.builtin.lineinfile:
+#     path: "{{ user_home }}/.zshrc"
+#     regexp: '^ZSH_THEME='
+#     line: 'ZSH_THEME="powerlevel10k/powerlevel10k"'
+
+- name: Install tiling window manager
+  when: install_tiling_wm
+  community.general.pacman:
+    name:
+      - "{{ tiling_wm }}"
+      - rofi
+      - dunst
+      - picom
+      - feh
+      - sxhkd
+      - lxappearance
+      - i3status
+      - dmenu
+      - i3lock
+    state: present
+
+- name: Install productivity tools
+  community.general.pacman:
+    name:
+      - flameshot
+      - meld
+      - zeal
+      - tmux
+      - btop
+      - ranger
+      - timeshift
+      - syncthing
+      - keepassxc
+    state: present
+
+- name: Install additional fonts
+  community.general.pacman:
+    name:
+      - ttf-dejavu
+      - ttf-liberation
+      - noto-fonts
+      - noto-fonts-emoji
+    state: present
+
+- name: Check for NVIDIA GPU
+  ansible.builtin.shell: lspci | grep -i nvidia
+  register: has_nvidia
+  changed_when: false
+  failed_when: false
+
+- name: Install NVIDIA CUDA support
+  when: has_nvidia.rc == 0
+  community.general.pacman:
+    name:
+      - cuda
+      - cudnn
+    state: present
+
+- name: Create project directories
+  become: false
+  ansible.builtin.file:
+    path: "{{ user_home }}/Projects/{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - llm-dev
+    - app-dev
+    - data-analysis
+
+- name: Set Alacritty as default terminal
+  become: false
+  ansible.builtin.command: xdg-mime default alacritty.desktop x-scheme-handler/terminal
+  changed_when: false
+  failed_when: false
+
+- name: Display completion message
+  ansible.builtin.debug:
+    msg: |
+      Development environment setup complete!
+
+      Access your local Git server at: http://localhost:{{ git_server_port }}
+
+      Remember to log out and back in for the docker group changes to take effect.
+
+      Python environments were not created as requested - use the following commands to set them up:
+      cd ~/projects/llm-dev
+      uv venv
+      source .venv/bin/activate
+      uv pip install torch transformers datasets huggingface_hub
+
+      Shells setup:
+      - ZSH with Powerlevel10k theme is installed
+      - Fish shell is also available, switch to it by typing 'fish'
+
+      Terminal:
+      - Alacritty has been configured as your terminal emulator
+
+      {% if install_tiling_wm %}
+      Window Manager:
+      - {{ tiling_wm }} has been installed as your tiling window manager
+      {% endif %}

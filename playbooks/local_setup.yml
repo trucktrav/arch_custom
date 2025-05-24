@@ -1,0 +1,30 @@
+---
+# playbook.yml - Ansible playbook for Arch Linux development environment setup
+- name: Arch Linux Development Environment Setup
+  hosts: localhost
+  gather_facts: true
+  connection: local
+  become: true
+
+  vars:
+    username: "{{ lookup('env', 'USER') }}"
+    user_home: "/home/{{ username }}"
+    git_server_port: 3000
+    install_tiling_wm: true  # Set to false if you don't want a tiling WM
+    tiling_wm: "i3-gaps"     # Options: i3-gaps, sway, awesome, qtile, bspwm
+    home: "{{ user_home }}"
+    user: "{{ username }}"
+    # DISPLAY: "{{ ansible_env.DISPLAY | default('') }}"
+    # XDG_CONFIG_HOME: "{{ ansible_env.XDG_CONFIG_HOME | default(user_home + '/.config') }}"
+    # XDG_DATA_HOME: "{{ ansible_env.XDG_DATA_HOME | default(user_home + '/.local/share') }}"
+    # PATH: "{{ ansible_env.PATH }}"
+
+  roles:
+    - role: custom
+      tags:
+        - custom
+        - base_setup
+    - role: manage_zsh
+      tags:
+        - manage_zsh
+        - base_setup

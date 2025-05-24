@@ -1,0 +1,25 @@
+---
+- name: Local Setup
+  hosts: localhost
+  gather_facts: true
+  vars:
+    username: "{{ lookup('env', 'USER') }}"
+    user_home: "/home/{{ username }}"
+    git_server_port: 3000
+    install_tiling_wm: true  # Set to false if you don't want a tiling WM
+    tiling_wm: "i3-gaps"     # Options: i3-gaps, sway, awesome, qtile, bspwm
+    home: "{{ user_home }}"
+    user: "{{ username }}"
+
+  tasks:
+    - name: Manage_zsh | Install Oh My ZSH plugins
+      ansible.builtin.git:
+        repo: "{{ manage_zsh_item.repo }}"
+        dest: "/home/{{ user }}/.oh-my-zsh/plugins/{{ manage_zsh_item.name }}"
+        version: master
+        force: true
+      loop:
+        - { name: zsh-autosuggestions, repo: https://github.com/zsh-users/zsh-autosuggestions }
+        - { name: zsh-syntax-highlighting, repo: https://github.com/zsh-users/zsh-syntax-highlighting }
+      loop_control:
+        loop_var: manage_zsh_item

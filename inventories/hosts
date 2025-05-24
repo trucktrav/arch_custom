@@ -1,0 +1,37 @@
+# Inventory file defining localhost
+
+# Define the localhost specifically
+localhost ansible_connection=local
+
+# Group for local development
+[local]
+localhost
+
+# Group for development environment
+[development]
+localhost
+
+# Group variables for local hosts
+[local:vars]
+ansible_python_interpreter=/usr/bin/python3
+ansible_connection=local
+
+# You can create additional groups as needed
+[webservers]
+# For future use
+# web1.example.com
+# web2.example.com
+
+[databases]
+# For future use
+# db1.example.com
+
+# Example of group hierarchy
+[development:children]
+local
+webservers
+
+[production:children]
+# For future use
+# webservers
+# databases

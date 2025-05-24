@@ -1,0 +1,5 @@
+---
+- name: Manage_zsh | Restart SSH
+  ansible.builtin.service:
+    name: ssh
+    state: restarted

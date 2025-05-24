@@ -1,0 +1,164 @@
+- name: Manage_zsh | Install required packages
+  community.general.pacman:
+    name:
+      - git
+      - zsh
+      - powerline
+      - fastfetch
+      - zsh-autosuggestions
+      - zsh-syntax-highlighting
+      - fzf
+    state: present
+
+# - name: Install zsh-theme-powerlevel10k
+#   become: false
+#   community.general.pacman:
+#     name: zsh-theme-powerlevel10k
+#     state: present
+#     executable: yay
+#     extra_args: "--builddir /tmp"
+
+# - name: Install zsh-theme-powerlevel10k from AUR
+#   ansible.builtin.command: yay -S --noconfirm --builddir /tmp zsh-theme-powerlevel10k
+#   become: false
+
+- name: Manage_zsh | Set ZSH as default shell
+  ansible.builtin.user:
+    name: "{{ user }}"
+    shell: /bin/zsh
+
+- name: Manage_zsh | Install Oh My ZSH
+  block:
+    - name: Manage_zsh | Download Oh My ZSH installer
+      ansible.builtin.get_url:
+        url: https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh
+        dest: /tmp/install-ohmyzsh.sh
+        mode: "0755"
+      failed_when: false
+
+    - name: Manage_zsh | Check if Oh My ZSH is installed
+      ansible.builtin.stat:
+        path: /home/{{ user }}/.oh-my-zsh
+      register: zsh_ohmyzsh_installed
+
+    - name: Manage_zsh | Become user for ZSH config
+      become: true
+      become_user: "{{ user }}"
+      block:
+        - name: Manage_zsh | Run Oh My ZSH installer
+          ansible.builtin.command:
+            cmd: /tmp/install-ohmyzsh.sh --unattended
+            creates: /home/{{ user }}/.oh-my-zsh
+
+        - name: Manage_zsh | Install Oh My ZSH plugins
+          ansible.builtin.git:
+            repo: "{{ manage_zsh_item.repo }}"
+            dest: "/home/{{ user }}/.oh-my-zsh/custom/plugins/{{ manage_zsh_item.name }}"
+            version: master
+            force: true
+          loop:
+            - { name: zsh-autosuggestions, repo: https://github.com/zsh-users/zsh-autosuggestions }
+            - { name: zsh-syntax-highlighting, repo: https://github.com/zsh-users/zsh-syntax-highlighting }
+            - { name: fzf-tab, repo:https://github.com/Aloxaf/fzf-tab }
+            - { name: zsh-completions, repo: }
+
+          loop_control:
+            loop_var: manage_zsh_item
+
+        - name: Manage_zsh | Copy zsh setting file
+          ansible.builtin.copy:
+            src: .zshrc
+            dest: "/home/{{ user }}/.zshrc"
+            mode: '0644'
+
+        - name: Manage_zsh | Add fastfetch aliases
+          ansible.builtin.blockinfile:
+            path: "/home/{{ user }}/.zshrc"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - Fastfetch aliases"
+            block: |
+              # Aliases for fastfetch
+              alias fetch='fastfetch'
+              alias neofetch='fastfetch'
+            insertafter: EOF
+
+        - name: Manage_zsh | Install and configure Powerlevel10k
+          block:
+            - name: Manage_zsh | Clone Powerlevel10k
+              ansible.builtin.git:
+                repo: https://github.com/romkatv/powerlevel10k
+                dest: /home/{{ user }}/.oh-my-zsh/custom/themes/powerlevel10k
+                version: master
+                force: true
+        - name: Manage_zsh | Set Powerlevel10k as the default theme
+          ansible.builtin.lineinfile:
+            path: /home/{{ user }}/.zshrc
+            regexp: ^ZSH_THEME=".*"
+            line: ZSH_THEME="powerlevel10k/powerlevel10k"
+            state: present
+
+          # - name: Manage_zsh | Add Powerlevel10k instant prompt to .zshrc
+          #   ansible.builtin.blockinfile:
+          #     path: /home/{{ user }}/.zshrc
+          #     insertbefore: BOF
+          #     block: |
+          #       # Enable Powerlevel10k instant promptt
+          #       if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+          #         source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+          #       fi
+
+- name: Manage_zsh | Configure fastfetch motd
+  block:
+    - name: Manage_zsh | Become user for fastfetch script
+      become: true
+      become_user: "{{ user }}"
+      block:
+        - name: Manage_zsh | Create fastfetch script
+          ansible.builtin.copy:
+            dest: "/home/{{ user }}/.fastfetch.sh"
+            mode: '0755'
+            content: |
+              #!/bin/bash
+              if [[ $- == *i* && $TERM_PROGRAM != "vscode" && -z "$FASTFETCH_DISPLAYED" ]]; then
+                fastfetch
+                export FASTFETCH_DISPLAYED=1
+              fi
+
+        - name: Manage_zsh | Source fastfetch script in .zshrc
+          ansible.builtin.blockinfile:
+            path: "/home/{{ user }}/.zshrc"
+            marker: "# {mark} ANSIBLE MANAGED BLOCK - Fastfetch"
+            block: |
+              # Run fastfetch
+              source ~/.fastfetch.sh
+            insertafter: "# {mark} ANSIBLE MANAGED BLOCK - Powerlevel10k instant prompt"
+
+        - name: Manage_zsh | Source fastfetch script in .zprofile
+          ansible.builtin.lineinfile:
+            path: "/home/{{ user }}/.zprofile"
+            line: 'source ~/.fastfetch.sh'
+            create: true
+            mode: '0664'
+        - name: Manage_zsh | Copy p10file to home directory
+          ansible.builtin.copy:
+            src: ./files/.p10k.zsh
+            dest: "/home/{{ user }}/.p10k.zsh"
+            mode: '0644'
+
+    - name: Manage_zsh | Disable default MOTD
+      ansible.builtin.file:
+        path: /etc/motd
+        state: absent
+
+    - name: Manage_zsh | Disable login information in /etc/issue
+      ansible.builtin.copy:
+        content: ""
+        dest: /etc/issue
+        force: true
+        mode: '0644'
+
+    - name: Manage_zsh  |  Disable login information in /etc/issue.net
+      ansible.builtin.copy:
+        content: ""
+        dest: /etc/issue.net
+        force: true
+        mode: '0644'
