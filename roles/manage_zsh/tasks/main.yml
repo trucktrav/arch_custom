@@ -59,9 +59,8 @@
           loop:
             - { name: zsh-autosuggestions, repo: https://github.com/zsh-users/zsh-autosuggestions }
             - { name: zsh-syntax-highlighting, repo: https://github.com/zsh-users/zsh-syntax-highlighting }
-            - { name: fzf-tab, repo:https://github.com/Aloxaf/fzf-tab }
-            - { name: zsh-completions, repo: }
-
+            - { name: fzf-tab, repo: https://github.com/Aloxaf/fzf-tab }
+            - { name: zsh-completions, repo: https://github.com/zsh-users/zsh-completions }
           loop_control:
             loop_var: manage_zsh_item
 
