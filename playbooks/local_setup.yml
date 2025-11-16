@@ -11,6 +11,7 @@
     USE_P10K: false
     USE_ALACRITTY: false
     INSTALL_CUSTOM_APPS: false
+    INSTALL_CLAUDE_CODE: true  # Install Claude Code CLI
     username: "{{ lookup('env', 'USER') }}"
     user_home: "/home/{{ username }}"
     git_server_port: 3000
@@ -41,4 +42,10 @@
       become: true
       tags:
         - docker
+        - base_setup
+    - role: claude_code
+      when: INSTALL_CLAUDE_CODE
+      tags:
+        - claude_code
+        - dev_tools
         - base_setup

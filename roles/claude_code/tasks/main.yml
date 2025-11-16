@@ -1,0 +1,79 @@
+---
+- name: Claude_code | Install Node.js and npm
+  community.general.pacman:
+    name:
+      - nodejs
+      - npm
+    state: present
+
+- name: Claude_code | Check if Claude Code is already installed
+  ansible.builtin.command: npm list -g @anthropic-ai/claude-code
+  register: claude_installed
+  changed_when: false
+  failed_when: false
+  become: false
+
+- name: Claude_code | Install Claude Code globally
+  ansible.builtin.command: npm install -g @anthropic-ai/claude-code
+  become: false
+  when: claude_installed.rc != 0
+  register: claude_install_result
+  changed_when: claude_install_result.rc == 0
+
+- name: Claude_code | Update Claude Code if already installed
+  ansible.builtin.command: npm update -g @anthropic-ai/claude-code
+  become: false
+  when: claude_installed.rc == 0
+  register: claude_update_result
+  changed_when: "'up to date' not in claude_update_result.stdout"
+
+- name: Claude_code | Get npm global bin path
+  ansible.builtin.command: npm config get prefix
+  register: npm_prefix
+  changed_when: false
+  become: false
+
+- name: Claude_code | Set npm bin path fact
+  ansible.builtin.set_fact:
+    npm_bin_path: "{{ npm_prefix.stdout }}/bin"
+
+- name: Claude_code | Add npm global bin to PATH in .zshrc
+  ansible.builtin.lineinfile:
+    path: "{{ user_home }}/.zshrc"
+    line: 'export PATH="{{ npm_bin_path }}:$PATH"'
+    regexp: '^export PATH=.*npm.*bin'
+    state: present
+    create: false
+  become: false
+  when: ansible_env.SHELL | regex_search('zsh')
+
+- name: Claude_code | Add npm global bin to PATH in .bashrc
+  ansible.builtin.lineinfile:
+    path: "{{ user_home }}/.bashrc"
+    line: 'export PATH="{{ npm_bin_path }}:$PATH"'
+    regexp: '^export PATH=.*npm.*bin'
+    state: present
+    create: false
+  become: false
+  when: ansible_env.SHELL | regex_search('bash')
+
+- name: Claude_code | Verify installation
+  ansible.builtin.command: "{{ npm_bin_path }}/claude --version"
+  register: claude_version
+  changed_when: false
+  become: false
+
+- name: Claude_code | Display installation info
+  ansible.builtin.debug:
+    msg:
+      - "✓ Claude Code installed successfully!"
+      - "Version: {{ claude_version.stdout }}"
+      - "Location: {{ npm_bin_path }}/claude"
+      - ""
+      - "Next steps:"
+      - "1. Restart your terminal or run: source ~/.zshrc"
+      - "2. Run 'claude' to start using Claude Code"
+      - "3. Set ANTHROPIC_API_KEY environment variable if not already set:"
+      - "   export ANTHROPIC_API_KEY='your-api-key-here'"
+      - ""
+      - "For more info: https://docs.claude.com/claude-code"

@@ -42,6 +42,7 @@ ansible-playbook playbooks/local_setup.yml
 ansible-playbook playbooks/local_setup.yml --tags custom
 ansible-playbook playbooks/local_setup.yml --tags starship
 ansible-playbook playbooks/local_setup.yml --tags docker
+ansible-playbook playbooks/local_setup.yml --tags claude_code
 ```
 
 ## Configuration Variables
@@ -53,6 +54,7 @@ Edit `playbooks/local_setup.yml` to customize your installation:
 USE_STARSHIP: true          # Enable Starship prompt (modern, minimal)
 USE_P10K: false             # Enable Powerlevel10k (feature-rich, Oh My Zsh)
 INSTALL_CUSTOM_APPS: false  # installs a bunch of custom apps for dev
+INSTALL_CLAUDE_CODE: true   # Install Claude Code CLI (requires Node.js)
 ```
 **Note**: Only enable one shell prompt at a time to avoid conflicts.
 
@@ -79,6 +81,7 @@ git_server_port: 3000                       # Local Git server port (if enabled)
 ### Core System Packages
 - Base development tools (base-devel, git, curl, wget, openssh)
 - Python 3 and pip
+- Node.js and npm (for Claude Code CLI)
 - yay (AUR helper)
 - UV (modern Python package manager)
 - Hyprland compositor
@@ -88,6 +91,7 @@ git_server_port: 3000                       # Local Git server port (if enabled)
 - **R and RStudio Desktop** (data science stack)
 - **PostgreSQL and MariaDB** (databases)
 - **Docker and Docker Compose** (containerization)
+- **Claude Code CLI** (AI coding assistant, optional)
 
 ### Terminal & Shell
 - **Alacritty** terminal with custom configuration
@@ -199,6 +203,28 @@ chsh -s /bin/zsh    # For Zsh
 chsh -s /bin/fish   # For Fish
 ```
 
+### 7. Claude Code Setup (Optional)
+If you installed Claude Code (`INSTALL_CLAUDE_CODE: true`):
+```bash
+# Restart your terminal to load the updated PATH
+# Or source your shell config:
+source ~/.zshrc
+
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY='your-api-key-here'
+
+# Add to your shell config for persistence:
+echo 'export ANTHROPIC_API_KEY="your-api-key-here"' >> ~/.zshrc
+
+# Test Claude Code installation
+claude --version
+
+# Start using Claude Code
+claude
+```
+
+For more information, visit: https://docs.claude.com/claude-code
+
 ## Project Structure
 
 ```
@@ -228,6 +254,9 @@ arch_custom/
 │   │   └── files/
 │   │       ├── starship.toml    # Starship configuration
 │   │       └── zshrc            # Zsh config for Starship
+│   ├── claude_code/             # Claude Code CLI
+│   │   └── tasks/
+│   │       └── main.yml         # Install Node.js, npm, Claude Code
 │   └── geerlingguy.docker/      # Docker role (Galaxy)
 ├── inventories/
 │   └── hosts                    # Localhost inventory
@@ -245,12 +274,17 @@ Use tags to run specific parts of the playbook:
 - `manage_zsh` - Zsh with Powerlevel10k setup
 - `starship` - Starship prompt installation
 - `docker` - Docker and Docker Compose
-- `base_setup` - All base components (custom + manage_zsh + starship + docker)
+- `claude_code` - Claude Code CLI installation
+- `dev_tools` - Development tools (includes Claude Code)
+- `base_setup` - All base components (custom + manage_zsh + starship + docker + claude_code)
 
 Example:
 ```bash
 # Install only Docker
 ansible-playbook playbooks/local_setup.yml --tags docker
+
+# Install only Claude Code
+ansible-playbook playbooks/local_setup.yml --tags claude_code
 
 # Install everything except Docker
 ansible-playbook playbooks/local_setup.yml --skip-tags docker
