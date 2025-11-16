@@ -524,3 +524,4 @@ When updating from old versions:
 - Review feature flags in `playbooks/local_setup.yml`
 - Run `ansible-galaxy install -r requirement.yml` for new dependencies
 - Check README.md for updated configuration variables
+- to memorize
