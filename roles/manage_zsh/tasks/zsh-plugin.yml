@@ -1,0 +1,34 @@
+--- 
+- name: Create zsh plugin directory
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.zsh"
+    state: directory
+    mode: '0755'
+
+- name: Clone zsh-autosuggestions
+  ansible.builtin.git:
+    repo: https://github.com/zsh-users/zsh-autosuggestions.git
+    dest: "{{ ansible_env.HOME }}/.zsh/zsh-autosuggestions"
+    version: master
+    depth: 1
+
+- name: Clone zsh-syntax-highlighting
+  ansible.builtin.git:
+    repo: https://github.com/zsh-users/zsh-syntax-highlighting.git
+    dest: "{{ ansible_env.HOME }}/.zsh/zsh-syntax-highlighting"
+    version: master
+    depth: 1
+
+- name: Clone zsh-completions
+  ansible.builtin.git:
+    repo: https://github.com/zsh-users/zsh-completions.git
+    dest: "{{ ansible_env.HOME }}/.zsh/zsh-completions"
+    version: master
+    depth: 1
+
+- name: Clone zsh-transient-prompt
+  ansible.builtin.git:
+    repo: https://github.com/olets/zsh-transient-prompt.git
+    dest: "{{ ansible_env.HOME }}/.zsh/zsh-transient-prompt"
+    version: main
+    depth: 1

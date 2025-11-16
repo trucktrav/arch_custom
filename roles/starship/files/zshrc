@@ -1,0 +1,111 @@
+HISTFILE=~/.histfile
+HISTSIZE=10000
+SAVEHIST=10000
+setopt appendhistory sharehistory incappendhistory histignorealldups autocd extendedglob nomatch notify
+bindkey -e
+
+export COLORTERM=truecolor
+fastfetch
+
+# History search with up/down arrows (like Fish!)
+autoload -Uz up-line-or-beginning-search down-line-or-beginning-search
+zle -N up-line-or-beginning-search
+zle -N down-line-or-beginning-search
+bindkey "^[[A" up-line-or-beginning-search
+bindkey "^[[B" down-line-or-beginning-search
+
+zstyle :compinstall filename '/home/travis/.zshrc'
+autoload -Uz compinit
+compinit
+
+# Completion styling
+zstyle ':completion:*' menu select
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # Case insensitive
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"    # Color files like ls
+zstyle ':completion:*:descriptions' format '%F{blue}-- %d --%f'
+zstyle ':completion:*:warnings' format '%F{red}-- no matches found --%f'
+zstyle ':completion:*:messages' format '%F{magenta}-- %d --%f'
+zstyle ':completion:*:corrections' format '%F{yellow}-- %d (errors: %e) --%f'
+zstyle ':completion:*' group-name ''  # Group results by category
+
+PROMPT_THEME="${PROMPT_THEME:-starship}"
+
+if [[ "$PROMPT_THEME" == "p10k" ]]; then
+
+    if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+      source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+    fi
+
+# Use powerline
+    USE_POWERLINE="true"
+# Has weird character width
+# Example:
+#    is not a diamond
+    HAS_WIDECHARS="false"
+# Source manjaro-zsh-configuration
+    if [[ -e /usr/share/zsh/manjaro-zsh-config ]]; then
+      source /usr/share/zsh/manjaro-zsh-config
+    fi
+# Use manjaro zsh prompt
+    if [[ -e /usr/share/zsh/manjaro-zsh-prompt ]]; then
+      source /usr/share/zsh/manjaro-zsh-prompt
+    fi
+
+
+    source ~/.p10k.zsh
+    [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+else
+    TRANSIENT_PROMPT_TRANSIENT_PROMPT='%F{blue}λ:%f '
+    TRANSIENT_PROMPT_TRANSIENT_RPROMPT=''
+    eval "$(starship init zsh)"
+    SPACESHIP_EXEC_TIME_ELAPSED=.01
+    source ~/.zsh/zsh-transient-prompt/transient-prompt.zsh-theme
+fi
+
+# Other init
+eval "$(zoxide init zsh)"
+
+
+source ~/.zsh/zsh-transient-prompt/transient-prompt.zsh-theme
+source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fpath=(~/.zsh/zsh-completions/src $fpath)
+
+source /usr/share/fzf/key-bindings.zsh
+source /usr/share/fzf/completion.zsh
+
+if [ -f ~/.zsh_aliases ]; then
+    source ~/.zsh_aliases
+fi
+
+# Quick alias management
+addalias() {
+    echo "alias $1='$2'" >> ~/.zsh_aliases
+    source ~/.zsh_aliases
+    echo "✅ Added: $1"
+}
+
+listalias() {
+    cat ~/.zsh_aliases
+}
+
+alias xc='xclip -selection clipboard'
+alias ls='eza --icons'
+alias ll='eza -lah --icons'
+alias cat='bat'
+alias cd='z'
+
+alias dps='docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"'
+alias dlog='docker logs -f'
+alias dcup='docker compose up -d'
+alias dcdown='docker compose down'
+
+alias ap='ansible-playbook'
+alias av='ansible-vault'
+
+alias pysync='uv sync'
+alias pyrun='uv run'
+alias pyshell='uv run ipython'
+# Aliases for fastfetch
+alias fetch='fastfetch'
+alias neofetch='fastfetch'

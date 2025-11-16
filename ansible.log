@@ -9928,3 +9928,8 @@ Should be written as:
     "community.general.sudosu": "Run tasks using sudo su -",
     "containers.podman.podman_unshare": "Run tasks using podman unshare"
 }
+2025-11-15 20:12:01,815 p=44921 u=trucktrav n=ansible INFO| Starting galaxy role install process
+2025-11-15 20:12:01,927 p=44921 u=trucktrav n=ansible INFO| - downloading role 'docker', owned by geerlingguy
+2025-11-15 20:12:02,412 p=44921 u=trucktrav n=ansible INFO| - downloading role from https://github.com/geerlingguy/ansible-role-docker/archive/7.8.0.tar.gz
+2025-11-15 20:12:02,634 p=44921 u=trucktrav n=ansible INFO| - extracting geerlingguy.docker to /home/trucktrav/Projects/ansible/arch_custom/roles/geerlingguy.docker
+2025-11-15 20:12:02,637 p=44921 u=trucktrav n=ansible INFO| - geerlingguy.docker (7.8.0) was installed successfully

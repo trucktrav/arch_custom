@@ -1,0 +1,77 @@
+- name: Install Alacritty terminal
+  community.general.pacman:
+    name:
+      - alacritty
+    state: present
+
+- name: Create Alacritty config directory
+  become: false
+  ansible.builtin.file:
+    path: "{{ user_home }}/.config/alacritty"
+    state: directory
+    mode: '0755'
+
+- name: Install Nerd Font for Alacritty
+  become: false
+  ansible.builtin.command: yay -S --noconfirm ttf-firacode-nerd
+  register: font_result
+  changed_when: font_result.rc == 0
+  failed_when: font_result.rc != 0 and 'error' in font_result.stderr
+
+- name: Configure Alacritty
+  become: false
+  ansible.builtin.copy:
+    content: alacritty.yml
+    dest: "{{ user_home }}/.config/alacritty/alacritty.yml"
+    mode: '0644'
+
+- name: Set Alacritty as default terminal
+  become: false
+  ansible.builtin.command: xdg-mime default alacritty.desktop x-scheme-handler/terminal
+  changed_when: false
+  failed_when: false
+  when: USE_ALACRITTY
+
+- name: Install TMUX terminal
+  community.general.pacman:
+    name:
+      - tmux
+    state: present
+
+- name: Create TMUX config directory
+  become: false
+  ansible.builtin.file:
+    path: "{{ user_home }}/.config/tmux"
+    state: directory
+    mode: '0755'
+
+- name: Configure TMUX
+  become: false
+  ansible.builtin.copy:
+    content: tmux.conf
+    dest: "{{ user_home }}/.config/tmux/tmux.conf"
+    mode: '0644'
+
+- name: Create tmux plugins directory
+  ansible.builtin.file:
+    path: "{{ tmux_config_dir }}/plugins"
+    state: directory
+    mode: '0755'
+
+- name: Clone TPM (Tmux Plugin Manager)
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: "{{ tpm_install_dir }}"
+    version: master
+    update: true
+- name: Display next steps
+  ansible.builtin.debug:
+    msg:
+      - "✓ Tmux installed successfully"
+      - "✓ TPM installed to {{ tpm_install_dir }}"
+      - "✓ Config copied to {{ tmux_config_dir }}/tmux.conf"
+      - ""
+      - "Next steps:"
+      - "1. Start tmux: tmux"
+      - "2. Install plugins: Press Ctrl+Space + I (capital I)"
+      - "3. Or run: {{ tpm_install_dir }}/bin/install_plugins"

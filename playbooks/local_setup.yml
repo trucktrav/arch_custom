@@ -7,6 +7,10 @@
   become: true
 
   vars:
+    USE_STARSHIP: true
+    USE_P10K: false
+    USE_ALACRITTY: false
+    INSTALL_CUSTOM_APPS: false
     username: "{{ lookup('env', 'USER') }}"
     user_home: "/home/{{ username }}"
     git_server_port: 3000
@@ -27,4 +31,14 @@
     - role: manage_zsh
       tags:
         - manage_zsh
+        - base_setup
+    - role: starship
+      when: USE_STARSHIP
+      tags:
+        - starship
+        - base_setup
+    - role: geerlingguy.docker
+      become: true
+      tags:
+        - docker
         - base_setup

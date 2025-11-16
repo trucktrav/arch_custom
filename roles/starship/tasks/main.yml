@@ -1,0 +1,25 @@
+---
+- name: Install zsh and dependencies
+  ansible.builtin.package:
+    name:
+      - zsh
+      - starship
+      - zoxide
+      - fzf
+      - eza
+      - bat
+      - ttf-jetbrains-mono-nerd
+    state: present
+  become: true
+
+- name: Copy .zshrc configuration
+  ansible.builtin.copy:
+    src: zshrc
+    dest: "{{ ansible_env.HOME }}/.zshrc"
+    mode: '0644'
+
+- name: Copy starship configuration
+  ansible.builtin.copy:
+    src: starship.toml
+    dest: "{{ ansible_env.HOME }}/.config/starship.toml"
+    mode: '0644'

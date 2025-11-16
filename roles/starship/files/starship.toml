@@ -1,0 +1,188 @@
+# ~/.config/starship.toml 
+
+# --- 1. THE ASSEMBLY LINE ---
+format = """
+[╭─](white)[ ](bg:#9A348E)\
+$os\
+[](fg:#9A348E bg:#0087FF)\
+$directory\
+[](fg:#0087FF bg:#00D700)\
+$git_branch\
+$git_commit\
+$git_state\
+$git_status\
+[](fg:#00D700)\
+$fill\
+[](fg:#86BBD8)\
+$python\
+$nodejs\
+$rust\
+$golang\
+$java\
+$scala\
+[](fg:#06969A bg:#86BBD8)\
+$docker_context\
+[](fg:#33658A bg:#06969A)\
+$time\
+[ ](bg:#33658A)\
+$status\
+$line_break\
+$character\
+"""
+
+# --- 2. PART DEFINITIONS ---
+[fill]
+symbol = " "
+
+# OS Module (Purple Block)
+[os]
+disabled = false
+style = "fg:#ffffff bg:#9A348E"
+format = '[$symbol]($style)'
+
+[os.symbols]
+Windows = " "
+Macos = " "
+Linux = " "
+Arch = " "
+Ubuntu = " "
+Fedora = " "
+Debian = " "
+Mint = " "
+# UPDATED: Correct Manjaro logo
+Manjaro = " "
+
+# Directory Module (Blue Block)
+[directory]
+style = "fg:#ffffff bg:#0087FF"
+format = '[ $path ]($style)'
+truncation_length = 3
+truncation_symbol = "…/"
+
+# Git Branch Module (Green Block)
+[git_branch]
+symbol = " "
+style = "fg:#000000 bg:#00D700"
+format = '[ $symbol$branch(:$remote_branch) ]($style)'
+truncation_length = 20
+truncation_symbol = "…"
+
+# Git Status Module (detailed status)
+[git_status]
+style = "fg:#000000 bg:#00D700"
+format = '[$all_status$ahead_behind ]($style)'
+conflicted = "⚔️ "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕⇡${ahead_count}⇣${behind_count} "
+untracked = "?${count} "
+stashed = "📦${count} "
+modified = "!${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "✘${count} "
+
+# Git Commit (shows current commit)
+[git_commit]
+style = "fg:#000000 bg:#00D700"
+format = '[ #$hash$tag ]($style)'
+commit_hash_length = 7
+only_detached = true
+
+# Git State (rebase, merge, etc)
+[git_state]
+style = "fg:#ffffff bg:#FF0000"
+format = '[\($state( $progress_current/$progress_total)\)]($style)'
+rebase = "REBASING"
+merge = "MERGING"
+revert = "REVERTING"
+cherry_pick = "CHERRY-PICKING"
+bisect = "BISECTING"
+am = "AM"
+am_or_rebase = "AM/REBASE"
+
+[python]
+# UPDATED: Switched from emoji to Nerd Font
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($virtualenv )($version) ](fg:#000000 bg:#86BBD8)'
+
+[golang]
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($version) ](fg:#000000 bg:#86BBD8)'
+
+[gradle]
+style = "bg:#86BBD8"
+format = '[ $symbol ($version) ]($style)'
+
+[haskell]
+symbol = " "
+style = "bg:#86BBD8"
+format = '[ $symbol ($version) ]($style)'
+
+[java]
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($version) ](fg:#000000 bg:#86BBD8)'
+
+[julia]
+symbol = " "
+style = "bg:#86BBD8"
+format = '[ $symbol ($version) ]($style)'
+
+[nodejs]
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($version) ](fg:#000000 bg:#86BBD8)'
+
+[nim]
+symbol = "󰆥 "
+style = "bg:#86BBD8"
+format = '[ $symbol ($version) ]($style)'
+
+[rust]
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($version) ](fg:#000000 bg:#86BBD8)'
+
+[scala]
+symbol = " "
+style = "fg:#000000 bg:#86BBD8"
+format = '[ $symbol($version) ](fg:#000000 bg:#86BBD8)'
+
+[docker_context]
+# UPDATED: Added standard Docker icon
+symbol = " "
+style = "fg:#ffffff bg:#06969A"
+#format = 'via [🐋 $context](blue bold)'
+format = '[ $symbol$context ](fg:#ffffff bg:#06969A)'
+#format = "via [⬢ $context](bold blue) "
+#detect_files = ["Dockerfile", "docker-compose.yml", ".dockerenv"]
+#disabled = false
+
+#[docker_context]
+#format = 'via [🐋 $context](blue bold)'
+
+
+[time]
+disabled = false
+time_format = "%R"
+style = "fg:#FFFFFF bg:#33658A"
+format = '[ $time  ]($style)'
+
+[status]
+disabled = false
+style = "(fg:#ffffff bg:#FF0000)"
+format = '[](fg:#FF0000 bg:#33658A)[ ✘ $status ](fg:#ffffff bg:#FF0000)'
+
+
+# The Prompt Arrow
+[character]
+success_symbol = '[╰─](white) '
+error_symbol = '[╰─](white) '
+
+#[status]
+#disabled = false
+#style = "(fg:#ffffff bg:#FF0000)"
+#format = '[](fg:#FF0000 bg:#33658A)[ ✘ $status ]($style)'
